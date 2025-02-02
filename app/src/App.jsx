@@ -13,33 +13,30 @@ import {
 import { db } from "./firebase";
 
 function App() {
-  // State to store the list of tasks
   const [tasks, setTasks] = useState([]);
-  // State for the new task input
   const [newTask, setNewTask] = useState("");
-  // State to track which task is being edited (by its id)
   const [editingTaskId, setEditingTaskId] = useState(null);
-  // State to hold the edited title
   const [editingTaskTitle, setEditingTaskTitle] = useState("");
-
-  // Subscribe to the "tasks" collection on component mount
+  
+  // State for the LLM text input
+  const [llmInputText, setLlmInputText] = useState("");
+  
+  // Subscribe to tasks collection
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "tasks"), (snapshot) => {
       const tasksData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
-      console.log("Firestore snapshot received:", tasksData); // Debug line
       setTasks(tasksData);
     });
     return () => unsubscribe();
   }, []);
 
-  // Handler to add a new task to Firestore
+  // Handler to add a new task manually
   const handleAddTask = async (e) => {
     e.preventDefault();
     if (!newTask.trim()) return;
-    console.log("Attempting to add task:", newTask);  // Debug log
     try {
       await addDoc(collection(db, "tasks"), {
         title: newTask,
@@ -47,14 +44,13 @@ function App() {
         completed: false,
         createdAt: serverTimestamp()
       });
-      console.log("Task added successfully!");
-      setNewTask(""); // Clear input after adding
+      setNewTask("");
     } catch (error) {
       console.error("Error adding task:", error);
     }
   };
 
-  // Handler to toggle task completion
+  // Toggle task completion
   const handleToggleComplete = async (task) => {
     try {
       const taskRef = doc(db, "tasks", task.id);
@@ -66,20 +62,19 @@ function App() {
     }
   };
 
-  // Handler to start editing a task
+  // Begin editing a task
   const handleEditTask = (task) => {
     setEditingTaskId(task.id);
     setEditingTaskTitle(task.title);
   };
 
-  // Handler to save an updated task title
+  // Save an updated task title
   const handleUpdateTask = async (task) => {
     try {
       const taskRef = doc(db, "tasks", task.id);
       await updateDoc(taskRef, {
         title: editingTaskTitle
       });
-      // Reset editing state
       setEditingTaskId(null);
       setEditingTaskTitle("");
     } catch (error) {
@@ -87,7 +82,7 @@ function App() {
     }
   };
 
-  // Handler to delete a task
+  // Delete a task
   const handleDeleteTask = async (task) => {
     try {
       const taskRef = doc(db, "tasks", task.id);
@@ -97,10 +92,38 @@ function App() {
     }
   };
 
+  // Handler to call the LLM parsing Cloud Function
+  const handleParseTasks = async () => {
+    if (!llmInputText.trim()) return;
+    try {
+      // Replace this URL with the URL of your deployed parseTasks Cloud Function
+      const functionUrl = "https://us-central1-taskmaster-af94a.cloudfunctions.net/parseTasks";
+      const response = await fetch(functionUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ inputText: llmInputText })
+      });
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+      const data = await response.json();
+      console.log("Parsed tasks:", data.tasks);
+      // Option 1: Simply log the parsed tasks.
+      // Option 2: Iterate through data.tasks and add them to Firestore.
+      for (const task of data.tasks) {
+        await addDoc(collection(db, "tasks"), task);
+      }
+      // Clear the textarea after processing
+      setLlmInputText("");
+    } catch (error) {
+      console.error("Error parsing tasks:", error);
+    }
+  };
+
   return (
     <div style={{ padding: "1rem", fontFamily: "Arial, sans-serif" }}>
       <h1>Taskmaster</h1>
-      {/* Form to add a new task */}
+      {/* Manual Task Entry */}
       <form onSubmit={handleAddTask}>
         <input
           type="text"
@@ -114,18 +137,18 @@ function App() {
         </button>
       </form>
       <hr style={{ margin: "1rem 0" }} />
+      
+      {/* Display Tasks */}
       <h2>Your Tasks</h2>
       <ul style={{ listStyleType: "none", padding: 0 }}>
         {tasks.map(task => (
           <li key={task.id} style={{ marginBottom: "1rem" }}>
-            {/* Checkbox to mark complete/incomplete */}
             <input
               type="checkbox"
               checked={task.completed}
               onChange={() => handleToggleComplete(task)}
             />
             {editingTaskId === task.id ? (
-              // If this task is being edited, show an input field
               <>
                 <input
                   type="text"
@@ -141,7 +164,6 @@ function App() {
                 </button>
               </>
             ) : (
-              // Otherwise, display the task title along with edit and delete buttons
               <>
                 <span
                   style={{
@@ -162,6 +184,21 @@ function App() {
           </li>
         ))}
       </ul>
+      
+      <hr style={{ margin: "1rem 0" }} />
+      
+      {/* LLM Task Parsing Section */}
+      <h2>LLM Task Parsing</h2>
+      <textarea
+        placeholder="Enter a block of text with tasks, each on a new line..."
+        value={llmInputText}
+        onChange={(e) => setLlmInputText(e.target.value)}
+        style={{ width: "100%", height: "100px", padding: "0.5rem" }}
+      />
+      <br />
+      <button onClick={handleParseTasks} style={{ marginTop: "0.5rem", padding: "0.5rem" }}>
+        Parse Tasks
+      </button>
     </div>
   );
 }
