@@ -1,12 +1,10 @@
-// Import the functions you need from the SDKs you need
+// firebase.js
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 import { getFirestore } from "firebase/firestore";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+// import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// Your Firebase config object
 const firebaseConfig = {
   apiKey: "AIzaSyDlZ40NbQC9h1t1mwEqh4PYE98HbRSsnoA",
   authDomain: "taskmaster-af94a.firebaseapp.com",
@@ -17,9 +15,14 @@ const firebaseConfig = {
   measurementId: "G-BZ4FW7G78T"
 };
 
-// Initialize Firebase
+// Initialize Firebase app
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
-
-// Initialize Firestore and export it as a named export "db"
 export const db = getFirestore(app);
+
+// Initialize App Check with your reCAPTCHA v3 Site Key
+// Replace "YOUR_SITE_KEY_HERE" with your actual site key from the reCAPTCHA Admin Console.
+// initializeAppCheck(app, {
+//   provider: new ReCaptchaV3Provider("6LcR_MoqAAAAAKtm-sW9-xyTwiXalL5CGEIaCsYN"),
+//   isTokenAutoRefreshEnabled: true, // Recommended for production
+// });
