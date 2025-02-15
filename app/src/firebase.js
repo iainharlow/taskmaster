@@ -22,7 +22,8 @@ export const db = getFirestore(app);
 
 // Initialize App Check with your reCAPTCHA v3 Site Key
 // Replace "YOUR_SITE_KEY_HERE" with your actual site key from the reCAPTCHA Admin Console.
-// initializeAppCheck(app, {
-//   provider: new ReCaptchaV3Provider("6LcR_MoqAAAAAKtm-sW9-xyTwiXalL5CGEIaCsYN"),
-//   isTokenAutoRefreshEnabled: true, // Recommended for production
-// });
+// Initialize App Check with your reCAPTCHA v3 site key
+initializeAppCheck(app, {
+  provider: new ReCaptchaV3Provider("6Lf2T9MqAAAAAAzPT8LPSomYNBQhw2c6-NxzhKaz"),
+  isTokenAutoRefreshEnabled: true,
+});

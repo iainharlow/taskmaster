@@ -86,12 +86,49 @@ function App() {
     }
   };
 
+  // Updated conversational input handler to call the cloud function.
   const handleConversationalInput = async (inputText) => {
-    setConversation((prev) => [
-      ...prev,
-      { sender: "User", text: inputText },
-      { sender: "LLM", text: `Simulated response: tasks parsed from "${inputText}"` },
-    ]);
+    // Add user's command to conversation history.
+    setConversation((prev) => [...prev, { sender: "User", text: inputText }]);
+
+    try {
+      // Replace with your actual cloud function endpoint URL.
+      const response = await fetch("https://us-central1-taskmaster-af94a.cloudfunctions.net/parseTasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ inputText }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      const newTasks = result.tasks || [];
+
+      let llmResponseText = "";
+      for (const task of newTasks) {
+        await addDoc(collection(db, "tasks"), {
+          title: task.title,
+          type: task.type,
+          completed: task.completed,
+          createdAt: serverTimestamp(),
+        });
+        llmResponseText += `Added task: ${task.title}\n`;
+      }
+
+      // Update conversation with the cloud function's response.
+      setConversation((prev) => [
+        ...prev,
+        { sender: "LLM", text: llmResponseText.trim() || "No tasks parsed from input." },
+      ]);
+    } catch (error) {
+      console.error("Error processing conversational input:", error);
+      setConversation((prev) => [
+        ...prev,
+        { sender: "LLM", text: "Error processing command." },
+      ]);
+    }
   };
 
   return (
